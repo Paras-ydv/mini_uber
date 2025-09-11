@@ -15,14 +15,22 @@ export default function RideForm({ fetchRides, fetchDrivers }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    await axios.post(`${API_BASE_URL}/book-ride`, {
-      user_id: parseInt(form.user_id),
-      start: form.start,
-      destination: form.destination
-    });
-    setForm({ user_id: "", start: "", destination: "" });
-    fetchRides();
-    fetchDrivers();
+
+    try {
+      const res = await axios.post(`${API_BASE_URL}/book-ride`, {
+        user_id: parseInt(form.user_id),
+        start: form.start,
+        destination: form.destination
+      });
+
+      console.log("Ride booked:", res.data);
+
+      setForm({ user_id: "", start: "", destination: "" }); // reset form
+      fetchRides();
+      fetchDrivers();
+    } catch (err) {
+      console.error("Error booking ride:", err.response ? err.response.data : err.message);
+    }
   };
 
   return (

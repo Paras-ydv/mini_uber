@@ -6,7 +6,7 @@ export default function DriverList({ drivers }) {
         {drivers.map((driver) => (
           <li
             key={driver.id}
-            className="border rounded p-2 bg-green-50 flex justify-between"
+            className="border rounded p-2 black flex justify-between"
           >
             <span>
               {driver.name} @ {driver.location}
