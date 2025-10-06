@@ -3,33 +3,33 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from datetime import datetime
 import threading, time
-from . import models, schemas
-from .db import SessionLocal, engine
 
-# create tables
+from db import SessionLocal, engine
+import models, schemas
+
+# Create tables
+models.Base.metadata.drop_all(bind=engine)
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
-# ✅ CORS Middleware
+# ✅ CORS setup
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:8000",  
-        "http://192.168.0.106:8000",  
-    ],
+    allow_origins=["*"],  # Allow all origins for development
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Dependency
+# Dependency to get DB session
 def get_db():
     db = SessionLocal()
     try:
         yield db
     finally:
         db.close()
+
 
 # ------------------ DRIVERS ------------------
 
@@ -40,6 +40,7 @@ def register_driver(name: str, location: str, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(driver)
     return {"message": "Driver registered 🚖", "driver_id": driver.id}
+
 
 @app.post("/go-online")
 def go_online(driver_id: int, db: Session = Depends(get_db)):
@@ -52,6 +53,7 @@ def go_online(driver_id: int, db: Session = Depends(get_db)):
     assign_pending_rides(db)
     return {"message": f"Driver {driver.name} is now online ✅"}
 
+
 @app.post("/go-offline")
 def go_offline(driver_id: int, db: Session = Depends(get_db)):
     driver = db.query(models.Driver).filter(models.Driver.id == driver_id).first()
@@ -60,6 +62,7 @@ def go_offline(driver_id: int, db: Session = Depends(get_db)):
     driver.status = "offline"
     db.commit()
     return {"message": f"Driver {driver.name} is now offline ❌"}
+
 
 @app.post("/heartbeat")
 def heartbeat(driver_id: int, db: Session = Depends(get_db)):
@@ -70,9 +73,11 @@ def heartbeat(driver_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"message": "Driver is alive"}
 
+
 @app.get("/available-drivers")
 def available_drivers(db: Session = Depends(get_db)):
     return db.query(models.Driver).filter(models.Driver.status == "online").all()
+
 
 # ------------------ RIDES ------------------
 
@@ -80,10 +85,12 @@ def available_drivers(db: Session = Depends(get_db)):
 def home():
     return {"message": "🚖 Welcome to Mini-Uber Backend"}
 
+
 @app.get("/queue")
 def get_queue(db: Session = Depends(get_db)):
     """Returns all rides in queue (pending, assigned, completed)."""
     return db.query(models.RideQueue).order_by(models.RideQueue.id).all()
+
 
 @app.post("/book-ride")
 def book_ride(ride: schemas.RideCreate, db: Session = Depends(get_db)):
@@ -112,22 +119,21 @@ def book_ride(ride: schemas.RideCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(ride_db)
 
-    # Trip simulation if assigned
     if driver:
-        import threading, time
         def finish_trip(driver_id, ride_id, duration=1):
             time.sleep(duration * 60)
             driver = db.query(models.Driver).filter(models.Driver.id == driver_id).first()
-            ride_db = db.query(models.RideQueue).filter(models.RideQueue.id == ride_id).first()
-            if driver and ride_db:
+            ride = db.query(models.RideQueue).filter(models.RideQueue.id == ride_id).first()
+            if driver and ride:
                 driver.status = "online"
-                ride_db.status = "completed"
+                ride.status = "completed"
                 db.commit()
                 assign_pending_rides(db)
 
         threading.Thread(target=finish_trip, args=(driver.id, ride_db.id)).start()
 
     return {"message": "Ride booked 🚖", "ride_id": ride_db.id, "driver": driver.name if driver else None}
+
 
 # ------------------ HELPER ------------------
 

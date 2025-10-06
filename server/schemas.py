@@ -13,7 +13,7 @@ class RideResponse(BaseModel):
     status: str
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class RideCreate(BaseModel):
     user_id: int
