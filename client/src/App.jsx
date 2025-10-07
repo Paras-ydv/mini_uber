@@ -1,43 +1,58 @@
-import { useState, useEffect } from "react";
-import axios from "axios";
-import { API_BASE_URL } from "./config";
-import RideForm from "./components/RideForm";
-import DriverList from "./components/DriverList";
-import DriverLogin from "./components/DriverLogin";
-import CurrentQueue from "./components/CurrentQueue";
+import { useState } from "react";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import Login from "./components/Login";
+import UserDashboard from "./components/UserDashboard";
+import DriverDashboard from "./components/DriverDashboard";
 
 export default function App() {
-  const [rides, setRides] = useState([]);
-  const [drivers, setDrivers] = useState([]);
+  const [currentUser, setCurrentUser] = useState(null);
 
-  const fetchRides = async () => {
-    const res = await axios.get(`${API_BASE_URL}/queue`);
-    setRides(res.data);
+  const handleLogin = (userData) => {
+    setCurrentUser(userData);
   };
 
-  const fetchDrivers = async () => {
-    const res = await axios.get(`${API_BASE_URL}/available-drivers`);
-    setDrivers(res.data);
+  const handleLogout = () => {
+    setCurrentUser(null);
   };
-
-  useEffect(() => {
-    fetchRides();
-    fetchDrivers();
-    const interval = setInterval(() => {
-      fetchDrivers();
-      fetchRides();
-    }, 5000);
-    return () => clearInterval(interval);
-  }, []);
 
   return (
-    <div className="max-w-2xl mx-auto p-6 font-sans">
-      <h1 className="text-2xl font-bold mb-4">🚖 Mini-Uber</h1>
-
-      <RideForm fetchRides={fetchRides} fetchDrivers={fetchDrivers} />
-      <DriverLogin fetchDrivers={fetchDrivers} />
-      <CurrentQueue rides={rides} />
-      <DriverList drivers={drivers} />
-    </div>
+    <Router>
+      <div className="w-full min-h-screen" style={{width: '100vw', minHeight: '100vh'}}>
+        <Routes>
+          <Route 
+            path="/" 
+            element={
+              !currentUser ? (
+                <Login onLogin={handleLogin} />
+              ) : currentUser.type === "user" ? (
+                <Navigate to="/user" replace />
+              ) : (
+                <Navigate to="/driver" replace />
+              )
+            } 
+          />
+          <Route 
+            path="/user" 
+            element={
+              currentUser && currentUser.type === "user" ? (
+                <UserDashboard user={currentUser} onLogout={handleLogout} />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            } 
+          />
+          <Route 
+            path="/driver" 
+            element={
+              currentUser && currentUser.type === "driver" ? (
+                <DriverDashboard driver={currentUser} onLogout={handleLogout} />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            } 
+          />
+        </Routes>
+      </div>
+    </Router>
   );
 }
