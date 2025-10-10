@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚖 Ride Details</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+        
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+            margin: 30px;
+        }
+        
+        .ride-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            animation: bounce 2s infinite;
+        }
+        
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-10px); }
+            60% { transform: translateY(-5px); }
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #fff, #f0f0f0);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .ride-info {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 25px;
+            margin: 25px 0;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 15px 0;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        
+        .label {
+            font-weight: 600;
+            opacity: 0.9;
+        }
+        
+        .value {
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+        
+        .status {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .status.assigned {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4);
+        }
+        
+        .ride-details {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .detail-section h3 {
+            color: white;
+            font-weight: 600;
+        }
+        
+        .detail-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 10px 0;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+        
+        .detail-label {
+            font-weight: 600;
+            opacity: 0.9;
+        }
+        
+        .detail-value {
+            font-weight: 700;
+            color: #4CAF50;
+        }
+        
+        .route {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .route-item {
+            display: flex;
+            align-items: center;
+            margin: 10px 0;
+            font-size: 1.1rem;
+        }
+        
+        .route-icon {
+            font-size: 1.5rem;
+            margin-right: 15px;
+            width: 30px;
+        }
+        
+        .container-info {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .container-info code {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="ride-icon">🚖</div>
+        <h1>Ride Details</h1>
+        
+        <div class="ride-info">
+            <div class="info-row">
+                <span class="label">Ride ID:</span>
+                <span class="value" id="rideId">Loading...</span>
+            </div>
+            <div class="info-row">
+                <span class="label">Status:</span>
+                <span class="status assigned pulse">ASSIGNED</span>
+            </div>
+            <div class="info-row">
+                <span class="label">Port:</span>
+                <span class="value" id="port">Loading...</span>
+            </div>
+        </div>
+        
+        <div class="ride-details">
+            <div class="detail-section">
+                <h3 style="margin-bottom: 15px; font-size: 1.2rem;">👥 Ride Participants</h3>
+                <div class="detail-item">
+                    <span class="detail-label">👤 Passenger:</span>
+                    <span class="detail-value" id="userName">Loading...</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">🚗 Driver:</span>
+                    <span class="detail-value" id="driverName">Loading...</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="route">
+            <div class="route-item">
+                <span class="route-icon">📍</span>
+                <span id="pickupLocation">Loading pickup...</span>
+            </div>
+            <div class="route-item">
+                <span class="route-icon">🎯</span>
+                <span id="dropLocation">Loading destination...</span>
+            </div>
+        </div>
+        
+        <div class="container-info">
+            <div style="margin-bottom: 10px;">🐳 <strong>Container Info</strong></div>
+            <div>Container: <code id="container">Loading...</code></div>
+            <div>Status: <code>Running</code></div>
+        </div>
+        
+        <div style="margin-top: 30px; opacity: 0.8; font-size: 0.9rem;">
+            <p>🚗 Mini-Uber Ride Service</p>
+            <p>Real-time ride tracking system</p>
+        </div>
+    </div>
+
+    <script>
+        const port = window.location.port || '7000';
+        
+        // Fetch ride details by port to get correct ride ID
+        async function fetchRideDetails() {
+            try {
+                const response = await fetch(`http://localhost:8000/ride-by-port/${port}`);
+                const data = await response.json();
+                
+                if (!data.error) {
+                    document.getElementById('rideId').textContent = '#' + data.ride_id;
+                    document.getElementById('port').textContent = port;
+                    document.getElementById('container').textContent = data.container_name;
+                    document.getElementById('userName').textContent = data.user_name;
+                    document.getElementById('driverName').textContent = data.driver_name;
+                    document.getElementById('pickupLocation').textContent = data.start;
+                    document.getElementById('dropLocation').textContent = data.destination;
+                }
+            } catch (error) {
+                console.error('Error fetching ride details:', error);
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            const container = document.querySelector('.container');
+            container.style.opacity = '0';
+            container.style.transform = 'translateY(20px)';
+            
+            setTimeout(() => {
+                container.style.transition = 'all 0.8s ease';
+                container.style.opacity = '1';
+                container.style.transform = 'translateY(0)';
+            }, 100);
+            
+            fetchRideDetails();
+        });
+    </script>
+</body>
+</html>

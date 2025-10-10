@@ -8,6 +8,7 @@ export default function Login({ onLogin }) {
   const [userType, setUserType] = useState("user");
   const [formData, setFormData] = useState({
     name: "",
+    email: "",
     location: ""
   });
   const [isLoading, setIsLoading] = useState(false);
@@ -27,73 +28,10 @@ export default function Login({ onLogin }) {
       });
 
       const { latitude, longitude } = position.coords;
-
-      // Use OpenStreetMap Nominatim for detailed street-level address
-      try {
-        const response = await fetch(
-          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`,
-          {
-            headers: {
-              'User-Agent': 'Mini-Uber-App'
-            }
-          }
-        );
-        const data = await response.json();
-        
-        console.log('Geocoding response:', data); // Debug log
-        
-        if (data && data.address) {
-          const addr = data.address;
-          let detailedAddress = [];
-          
-          // Build detailed address from most specific to general
-          if (addr.house_number && addr.road) {
-            detailedAddress.push(`${addr.house_number} ${addr.road}`);
-          } else if (addr.road) {
-            detailedAddress.push(addr.road);
-          }
-          
-          if (addr.neighbourhood) {
-            detailedAddress.push(addr.neighbourhood);
-          } else if (addr.suburb) {
-            detailedAddress.push(addr.suburb);
-          }
-          
-          if (addr.city_district && addr.city_district !== addr.neighbourhood) {
-            detailedAddress.push(addr.city_district);
-          }
-          
-          if (addr.city || addr.town || addr.village) {
-            detailedAddress.push(addr.city || addr.town || addr.village);
-          }
-          
-          if (addr.state) {
-            detailedAddress.push(addr.state);
-          }
-          
-          const finalAddress = detailedAddress.join(', ');
-          
-          if (finalAddress && finalAddress.length > 5) {
-            setFormData(prev => ({ ...prev, location: finalAddress }));
-          } else {
-            // Use display_name as fallback
-            setFormData(prev => ({ ...prev, location: data.display_name || `${latitude.toFixed(6)}, ${longitude.toFixed(6)}` }));
-          }
-        } else {
-          // Fallback to coordinates
-          setFormData(prev => ({ 
-            ...prev, 
-            location: `${latitude.toFixed(6)}, ${longitude.toFixed(6)}` 
-          }));
-        }
-      } catch (geocodeError) {
-        console.error('Geocoding error:', geocodeError);
-        // Final fallback to coordinates
-        setFormData(prev => ({ 
-          ...prev, 
-          location: `${latitude.toFixed(6)}, ${longitude.toFixed(6)}` 
-        }));
-      }
+      
+      // Format as readable location
+      const locationStr = `Lat: ${latitude.toFixed(4)}, Lng: ${longitude.toFixed(4)}`;
+      setFormData(prev => ({ ...prev, location: locationStr }))
     } catch (error) {
       console.error('Error getting location:', error);
       alert('Unable to get your location. Please enter it manually.');
@@ -111,6 +49,7 @@ export default function Login({ onLogin }) {
         const response = await axios.post(`${API_BASE_URL}/register-driver`, null, {
           params: {
             name: formData.name,
+            email: formData.email,
             location: formData.location
           }
         });
@@ -123,15 +62,24 @@ export default function Login({ onLogin }) {
           type: "driver",
           id: response.data.driver_id,
           name: formData.name,
+          email: formData.email,
           location: formData.location
         };
         onLogin(userData);
         navigate('/driver');
       } else {
+        const response = await axios.post(`${API_BASE_URL}/register-user`, null, {
+          params: {
+            name: formData.name,
+            email: formData.email
+          }
+        });
+        
         const userData = {
           type: "user",
-          id: Date.now(),
-          name: formData.name
+          id: response.data.user_id,
+          name: formData.name,
+          email: formData.email
         };
         onLogin(userData);
         navigate('/user');
@@ -145,7 +93,7 @@ export default function Login({ onLogin }) {
   };
 
   return (
-    <div className="min-h-screen w-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 relative overflow-hidden" style={{minWidth: '100vw'}}>
+    <div className="min-h-screen w-full bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 relative overflow-hidden">
       {/* Professional 3D Background Elements */}
       <div className="absolute inset-0">
         {/* 3D Grid Pattern */}
@@ -175,37 +123,37 @@ export default function Login({ onLogin }) {
       </div>
 
       {/* Main Content */}
-      <div className="relative z-10 flex items-center justify-center min-h-screen p-4">
-        <div className="w-full max-w-lg">
+      <div className="relative z-10 flex items-center justify-center min-h-screen p-4 sm:p-6 md:p-8">
+        <div className="w-full max-w-lg mx-auto">
           {/* Professional Header */}
-          <div className="text-center mb-12">
-            <div className="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-2xl mb-8 shadow-2xl transform hover:scale-110 transition-all duration-300">
-              <div className="text-4xl">🚖</div>
+          <div className="text-center mb-8 sm:mb-12 animate-fadeIn">
+            <div className="inline-flex items-center justify-center w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-2xl mb-6 sm:mb-8 shadow-2xl transform hover:scale-110 transition-all duration-500 hover:rotate-6">
+              <div className="text-3xl sm:text-4xl">🚖</div>
             </div>
-            <h1 className="text-6xl font-bold bg-gradient-to-r from-white via-blue-100 to-cyan-100 bg-clip-text text-transparent mb-4 drop-shadow-2xl">
+            <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold bg-gradient-to-r from-white via-blue-100 to-cyan-100 bg-clip-text text-transparent mb-3 sm:mb-4 drop-shadow-2xl animate-slideDown">
               Mini-Uber
             </h1>
-            <p className="text-white/80 text-xl font-light tracking-wide">
+            <p className="text-white/80 text-base sm:text-lg md:text-xl font-light tracking-wide animate-slideUp">
               Professional Transportation Platform
             </p>
           </div>
 
           {/* Professional Login Card */}
-          <div className="bg-white/10 backdrop-blur-2xl rounded-3xl shadow-2xl p-10 border border-white/20 transform hover:scale-105 transition-all duration-500" 
+          <div className="bg-white/10 backdrop-blur-2xl rounded-2xl sm:rounded-3xl shadow-2xl p-6 sm:p-8 md:p-10 border border-white/20 transform hover:scale-[1.02] transition-all duration-500 animate-scaleIn" 
                style={{boxShadow: '0 25px 50px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)'}}>
             
-            <div className="text-center mb-10">
-              <h2 className="text-3xl font-bold text-white mb-3">Welcome</h2>
-              <p className="text-white/70 text-lg">Select your role to continue</p>
+            <div className="text-center mb-6 sm:mb-8 md:mb-10">
+              <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2 sm:mb-3">Welcome</h2>
+              <p className="text-white/70 text-sm sm:text-base md:text-lg">Select your role to continue</p>
             </div>
 
             {/* Professional Role Selector */}
-            <div className="mb-10">
-              <div className="grid grid-cols-2 gap-6">
+            <div className="mb-6 sm:mb-8 md:mb-10">
+              <div className="grid grid-cols-2 gap-3 sm:gap-4 md:gap-6">
                 <button
                   type="button"
                   onClick={() => setUserType("user")}
-                  className={`relative p-8 rounded-2xl border-2 transition-all duration-500 transform hover:scale-110 ${
+                  className={`relative p-4 sm:p-6 md:p-8 rounded-xl sm:rounded-2xl border-2 transition-all duration-500 transform hover:scale-105 sm:hover:scale-110 ${
                     userType === "user"
                       ? "border-blue-400 bg-gradient-to-br from-blue-500/20 to-cyan-600/20 shadow-2xl scale-105"
                       : "border-white/20 bg-white/5 hover:border-blue-400/50 hover:bg-blue-500/10"
@@ -217,18 +165,18 @@ export default function Login({ onLogin }) {
                   }}
                 >
                   <div className="text-center">
-                    <div className="text-5xl mb-4 transform hover:scale-110 transition-transform duration-300">👤</div>
-                    <div className={`font-bold text-xl mb-2 ${
+                    <div className="text-3xl sm:text-4xl md:text-5xl mb-2 sm:mb-3 md:mb-4 transform hover:scale-110 transition-transform duration-300">👤</div>
+                    <div className={`font-bold text-base sm:text-lg md:text-xl mb-1 sm:mb-2 ${
                       userType === "user" ? "text-blue-300" : "text-white"
                     }`}>
                       Passenger
                     </div>
-                    <div className="text-white/60 text-sm">
+                    <div className="text-white/60 text-xs sm:text-sm">
                       Book premium rides
                     </div>
                   </div>
                   {userType === "user" && (
-                    <div className="absolute -top-3 -right-3 w-10 h-10 bg-gradient-to-r from-blue-500 to-cyan-600 rounded-full flex items-center justify-center shadow-2xl animate-pulse">
+                    <div className="absolute -top-2 -right-2 sm:-top-3 sm:-right-3 w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-blue-500 to-cyan-600 rounded-full flex items-center justify-center shadow-2xl animate-bounce">
                       <span className="text-white font-bold">✓</span>
                     </div>
                   )}
@@ -282,6 +230,21 @@ export default function Login({ onLogin }) {
                   className="w-full px-6 py-4 bg-white/10 border border-white/20 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all duration-300 text-lg text-white placeholder-white/50 backdrop-blur-sm"
                   style={{boxShadow: 'inset 0 2px 4px rgba(0, 0, 0, 0.2)'}}
                   placeholder="Enter your full name"
+                />
+              </div>
+
+              <div>
+                <label className="block text-white font-semibold mb-4 text-lg">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={formData.email}
+                  onChange={(e) => setFormData({...formData, email: e.target.value})}
+                  className="w-full px-6 py-4 bg-white/10 border border-white/20 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all duration-300 text-lg text-white placeholder-white/50 backdrop-blur-sm"
+                  style={{boxShadow: 'inset 0 2px 4px rgba(0, 0, 0, 0.2)'}}
+                  placeholder="Enter your email"
                 />
               </div>
 

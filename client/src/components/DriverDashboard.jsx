@@ -6,10 +6,11 @@ import MapComponent from "./MapComponent";
 
 export default function DriverDashboard({ driver, onLogout }) {
   const navigate = useNavigate();
-  const [isOnline, setIsOnline] = useState(true);
+  const [isOnline, setIsOnline] = useState(false);
   const [availableRides, setAvailableRides] = useState([]);
   const [assignedRides, setAssignedRides] = useState([]);
   const [completedRides, setCompletedRides] = useState([]);
+  const [onlineDriversCount, setOnlineDriversCount] = useState(0);
 
   const fetchRides = async () => {
     try {
@@ -28,6 +29,15 @@ export default function DriverDashboard({ driver, onLogout }) {
     }
   };
 
+  const fetchOnlineDrivers = async () => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/available-drivers`);
+      setOnlineDriversCount(response.data.length);
+    } catch (error) {
+      console.error("Error fetching online drivers:", error);
+    }
+  };
+
   const toggleOnlineStatus = async () => {
     try {
       if (isOnline) {
@@ -40,47 +50,83 @@ export default function DriverDashboard({ driver, onLogout }) {
           params: { driver_id: driver.id }
         });
         setIsOnline(true);
+        await sendHeartbeat(); // Send heartbeat immediately after going online
       }
+      fetchOnlineDrivers(); // Refresh driver count immediately
     } catch (error) {
       console.error("Error toggling status:", error);
     }
   };
 
   const sendHeartbeat = async () => {
-    if (isOnline) {
-      try {
-        await axios.post(`${API_BASE_URL}/heartbeat`, null, {
-          params: { driver_id: driver.id }
-        });
-      } catch (error) {
-        console.error("Heartbeat error:", error);
-      }
+    try {
+      await axios.post(`${API_BASE_URL}/heartbeat`, null, {
+        params: { driver_id: driver.id }
+      });
+    } catch (error) {
+      console.error("Heartbeat error:", error);
     }
   };
 
   useEffect(() => {
+    let ridesInterval;
+    let heartbeatInterval;
+    
+    // Set driver online on mount
+    const initDriver = async () => {
+      try {
+        await axios.post(`${API_BASE_URL}/go-online`, null, {
+          params: { driver_id: driver.id }
+        });
+        setIsOnline(true);
+        await sendHeartbeat(); // Send heartbeat immediately
+      } catch (error) {
+        console.error("Error setting driver online:", error);
+      }
+    };
+    
+    initDriver();
     fetchRides();
-    const ridesInterval = setInterval(fetchRides, 3000);
-    const heartbeatInterval = setInterval(sendHeartbeat, 30000);
+    fetchOnlineDrivers();
+    
+    ridesInterval = setInterval(() => {
+      fetchRides();
+      fetchOnlineDrivers();
+    }, 3000);
+    heartbeatInterval = setInterval(() => {
+      sendHeartbeat();
+    }, 5000);
+    
+    // Mark driver offline when tab closes
+    const handleBeforeUnload = () => {
+      navigator.sendBeacon(`${API_BASE_URL}/go-offline?driver_id=${driver.id}`);
+    };
+    
+    window.addEventListener('beforeunload', handleBeforeUnload);
     
     return () => {
       clearInterval(ridesInterval);
       clearInterval(heartbeatInterval);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      // Set driver offline on unmount
+      axios.post(`${API_BASE_URL}/go-offline`, null, {
+        params: { driver_id: driver.id }
+      }).catch(err => console.error("Error going offline:", err));
     };
-  }, [isOnline]);
+  }, []);
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-br from-green-50 via-white to-blue-50">
-      <div className="w-full max-w-7xl mx-auto p-6">
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <div className="flex justify-between items-center mb-4">
-            <h1 className="text-2xl font-bold text-gray-900">
+    <div className="min-h-screen w-full bg-gradient-to-br from-green-50 via-white to-blue-50 overflow-x-hidden">
+      <div className="w-full max-w-7xl mx-auto p-4 sm:p-6 md:p-8 overflow-x-hidden">
+        <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-6 overflow-hidden">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+            <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 break-words min-w-0 flex-1 max-w-full overflow-hidden">
               Driver Dashboard - {driver.name} 🚗
             </h1>
-            <div className="flex space-x-3">
+            <div className="flex space-x-2 flex-shrink-0">
               <button
                 onClick={toggleOnlineStatus}
-                className={`px-4 py-2 rounded-md font-medium ${
+                className={`px-3 sm:px-4 py-2 rounded-md font-medium whitespace-nowrap text-sm sm:text-base ${
                   isOnline
                     ? "bg-green-500 text-white hover:bg-green-600"
                     : "bg-gray-500 text-white hover:bg-gray-600"
@@ -93,14 +139,21 @@ export default function DriverDashboard({ driver, onLogout }) {
                   onLogout();
                   navigate('/');
                 }}
-                className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
+                className="px-3 sm:px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors whitespace-nowrap text-sm sm:text-base"
               >
                 Logout
               </button>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div className="bg-orange-50 p-4 rounded-lg">
+              <h3 className="font-semibold text-orange-800">Online Drivers</h3>
+              <div className="flex items-center space-x-2">
+                <p className="text-2xl font-bold text-orange-600">{onlineDriversCount}</p>
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+              </div>
+            </div>
             <div className="bg-blue-50 p-4 rounded-lg">
               <h3 className="font-semibold text-blue-800">Available Rides</h3>
               <p className="text-2xl font-bold text-blue-600">{availableRides.length}</p>
@@ -141,18 +194,18 @@ export default function DriverDashboard({ driver, onLogout }) {
             ) : (
               <div className="space-y-3">
                 {availableRides.map((ride) => (
-                  <div key={ride.id} className="border border-gray-200 rounded-lg p-4">
-                    <div className="flex justify-between items-start">
-                      <div>
+                  <div key={ride.id} className="border border-gray-200 rounded-lg p-4 overflow-hidden">
+                    <div className="flex justify-between items-start gap-2">
+                      <div className="min-w-0 flex-1">
                         <p className="font-medium">User #{ride.user_id}</p>
-                        <p className="text-sm text-gray-600">
+                        <p className="text-sm text-gray-600 break-words">
                           📍 {ride.start} → 🎯 {ride.destination}
                         </p>
                         <p className="text-xs text-gray-500 mt-1">
                           Ride #{ride.id}
                         </p>
                       </div>
-                      <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs">
+                      <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs whitespace-nowrap flex-shrink-0">
                         Pending
                       </span>
                     </div>
@@ -174,18 +227,23 @@ export default function DriverDashboard({ driver, onLogout }) {
             ) : (
               <div className="space-y-3">
                 {assignedRides.map((ride) => (
-                  <div key={ride.id} className="border border-green-200 rounded-lg p-4 bg-green-50">
-                    <div className="flex justify-between items-start">
-                      <div>
+                  <div key={ride.id} className="border border-green-200 rounded-lg p-4 bg-green-50 overflow-hidden">
+                    <div className="flex justify-between items-start gap-2">
+                      <div className="min-w-0 flex-1">
                         <p className="font-medium">User #{ride.user_id}</p>
-                        <p className="text-sm text-gray-600">
+                        <p className="text-sm text-gray-600 break-words">
                           📍 {ride.start} → 🎯 {ride.destination}
                         </p>
                         <p className="text-xs text-gray-500 mt-1">
                           Ride #{ride.id}
                         </p>
+                        <div className="mt-2 p-2 bg-green-100 rounded text-xs overflow-hidden">
+                          <p className="font-semibold text-green-800">🐈 Container Info:</p>
+                          <p className="text-green-700 break-all">Port: {ride.port || 'N/A'}</p>
+                          <p className="text-green-600 break-all">Container: ride-{ride.id}</p>
+                        </div>
                       </div>
-                      <span className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs">
+                      <span className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs whitespace-nowrap flex-shrink-0">
                         Assigned
                       </span>
                     </div>
@@ -204,15 +262,15 @@ export default function DriverDashboard({ driver, onLogout }) {
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {completedRides.slice(0, 6).map((ride) => (
-                <div key={ride.id} className="border border-gray-200 rounded-lg p-3">
-                  <div className="flex justify-between items-start">
-                    <div>
+                <div key={ride.id} className="border border-gray-200 rounded-lg p-3 overflow-hidden">
+                  <div className="flex justify-between items-start gap-2">
+                    <div className="min-w-0 flex-1">
                       <p className="font-medium text-sm">User #{ride.user_id}</p>
-                      <p className="text-xs text-gray-600">
+                      <p className="text-xs text-gray-600 break-words">
                         {ride.start} → {ride.destination}
                       </p>
                     </div>
-                    <span className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs">
+                    <span className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs whitespace-nowrap flex-shrink-0">
                       Completed
                     </span>
                   </div>

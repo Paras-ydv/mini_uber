@@ -1,11 +1,22 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import Login from "./components/Login";
 import UserDashboard from "./components/UserDashboard";
 import DriverDashboard from "./components/DriverDashboard";
 
 export default function App() {
-  const [currentUser, setCurrentUser] = useState(null);
+  const [currentUser, setCurrentUser] = useState(() => {
+    const saved = sessionStorage.getItem('currentUser');
+    return saved ? JSON.parse(saved) : null;
+  });
+
+  useEffect(() => {
+    if (currentUser) {
+      sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
+    } else {
+      sessionStorage.removeItem('currentUser');
+    }
+  }, [currentUser]);
 
   const handleLogin = (userData) => {
     setCurrentUser(userData);
@@ -13,6 +24,7 @@ export default function App() {
 
   const handleLogout = () => {
     setCurrentUser(null);
+    sessionStorage.removeItem('currentUser');
   };
 
   return (
